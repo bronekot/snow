@@ -30,6 +30,7 @@
       // const wind_decay = maxWind ** (1 / fps);
       const wind_decay = 0.9995;
       const alphaFactor = 81; // 3**4
+      const PI2 = Math.PI * 2;
 
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
@@ -41,13 +42,29 @@
       let wind_global = Math.random() - 0.5;
       let lastTime = performance.now();
 
+      function resetSnowflake(s, initial = false) {
+        const radius = Math.random() * 3 + 1;
+        s.radius = radius;
+        s.radius4 = radius * radius * radius * radius;
+        s.speed = Math.random() * 2 + 1;
+        s.wind = Math.random() * 1 - 0.5;
+        s.wind_z = Math.random() * (initial ? 0.02 : 0.01) - (initial ? 0.01 : 0.005);
+        s.x = initial
+          ? Math.random() * canvas.width
+          : Math.random() * canvas.width * x_n_screen -
+            (canvas.width * (x_n_screen - 1)) / 2;
+        s.y = initial ? Math.random() * canvas.height : -10;
+      }
+
       function createSnowflake() {
+        const radius = Math.random() * 3 + 1;
         return {
           x:
             Math.random() * canvas.width * x_n_screen -
             (canvas.width * (x_n_screen - 1)) / 2,
           y: -10,
-          radius: Math.random() * 3 + 1,
+          radius: radius,
+          radius4: radius * radius * radius * radius,
           speed: Math.random() * 2 + 1,
           wind: Math.random() * 1 - 0.5,
           wind_z: Math.random() * 0.01 - 0.005,
@@ -55,18 +72,16 @@
       }
 
       function createSnowflakeFirst() {
+        const radius = Math.random() * 3 + 1;
         return {
           x: Math.random() * canvas.width,
           y: Math.random() * canvas.height,
-          radius: Math.random() * 3 + 1,
+          radius: radius,
+          radius4: radius * radius * radius * radius,
           speed: Math.random() * 2 + 1,
           wind: Math.random() * 1 - 0.5,
           wind_z: Math.random() * 0.02 - 0.01,
         };
-      }
-
-      for (let i = 0; i < 100 * x_n_screen; i++) {
-        snowflakes.push(createSnowflakeFirst());
       }
 
       function animateSnowfall(timestamp) {
@@ -83,24 +98,24 @@
 
         for (let i = 0; i < snowflakes.length; i++) {
           const s = snowflakes[i];
-          const alpha = Math.max(
-            0,
-            Math.min(
-              1,
-              alphaFactor / (s.radius * s.radius * s.radius * s.radius)
-            )
-          );
-          ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-          ctx.beginPath();
-          ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
-          ctx.fill();
+
+          s.radius4 = s.radius * s.radius * s.radius * s.radius;
+
+          const alpha = alphaFactor / s.radius4;
+
+          if (alpha > 0.01) {
+            ctx.fillStyle = `rgba(255,255,255,${alpha > 1 ? 1 : alpha})`;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.radius, 0, PI2);
+            ctx.fill();
+          }
 
           s.y += (s.radius + 1) * dt;
           s.x += (s.wind + wind_global) * dt;
           s.radius += s.wind_z * dt;
 
           if (s.y > canvas.height || s.radius < 0 || alpha <= 0.01)
-            snowflakes[i] = createSnowflake();
+            resetSnowflake(s);
         }
 
         requestAnimationFrame(animateSnowfall);

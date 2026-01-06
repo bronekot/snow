@@ -1,131 +1,145 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Snowfall Effect</title>
-    <style>
-      body {
-        margin: 0;
-        overflow: hidden;
-        /* background: transparent; */
-        background: black;
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Snowfall Effect</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      /* background: transparent; */
+      background: black;
+    }
+
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+  <script type="module">
+    const getUrlParam = (key, defaultValue) => new URLSearchParams(window.location.search).get(key) ?? defaultValue;
+    const ALPHA_FACTOR = 81; // 3**4
+    const PI2 = Math.PI * 2;
+    const FRAME_DURATION_IN_MS = 16.67;
+    const X_N_SCREEN = 2;
+    // const wind_decay = maxWind ** (1 / fps);
+    const WIND_DECAY = 0.9995;
+
+    // для настройки через URL: `/snow.html?count=123&maxWind=123`
+    const COUNT = Number(getUrlParam('count', Math.round(120 * X_N_SCREEN)));
+    const MAX_WIND = Number(getUrlParam('maxWind', 10));
+
+    class CanvasService {
+      canvas = document.createElement('canvas');
+      ctx = this.canvas.getContext('2d');
+      constructor() {
+        this.updateCanvasSize();
+      }
+      updateCanvasSize = () => {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+      };
+    }
+
+    class WindService {
+      globalWind = Math.random() - 0.5;
+
+      updateGlobalWind() {
+        this.globalWind = Math.max(-MAX_WIND, Math.min(MAX_WIND, this.globalWind + (Math.random() * 0.2 - 0.1))) * WIND_DECAY;
+      }
+    }
+
+    class Snowflake {
+      canvas;
+      x;
+      y;
+      radius = Math.random() * 3 + 1;
+      speed = Math.random() * 2 + 1;
+      wind = Math.random() * 1 - 0.5;
+      wind_z = Math.random() * 0.02 - 0.01;
+
+      constructor(canvas) {
+        this.canvas = canvas;
+        this.x = Math.random() * this.canvas.width;
+        this.y = Math.random() * this.canvas.height;
       }
 
-      canvas {
-        display: block;
-      }
-    </style>
-  </head>
-
-  <body>
-    <canvas id="snowCanvas"></canvas>
-
-    <script>
-      const canvas = document.getElementById("snowCanvas");
-      const ctx = canvas.getContext("2d");
-
-      const maxWind = 10;
-      const x_n_screen = 2;
-      // const wind_decay = maxWind ** (1 / fps);
-      const wind_decay = 0.9995;
-      const alphaFactor = 81; // 3**4
-      const PI2 = Math.PI * 2;
-
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-
-      const snowflakes = [];
-      const count = Math.round(120 * x_n_screen);
-      for (let i = 0; i < count; i++) snowflakes.push(createSnowflakeFirst());
-
-      let wind_global = Math.random() - 0.5;
-      let lastTime = performance.now();
-
-      function resetSnowflake(s, initial = false) {
-        const radius = Math.random() * 3 + 1;
-        s.radius = radius;
-        s.radius4 = radius * radius * radius * radius;
-        s.speed = Math.random() * 2 + 1;
-        s.wind = Math.random() * 1 - 0.5;
-        s.wind_z = Math.random() * (initial ? 0.02 : 0.01) - (initial ? 0.01 : 0.005);
-        s.x = initial
-          ? Math.random() * canvas.width
-          : Math.random() * canvas.width * x_n_screen -
-            (canvas.width * (x_n_screen - 1)) / 2;
-        s.y = initial ? Math.random() * canvas.height : -10;
+      get alpha() {
+        return ALPHA_FACTOR / (this.radius * this.radius * this.radius * this.radius);
       }
 
-      function createSnowflake() {
-        const radius = Math.random() * 3 + 1;
-        return {
-          x:
-            Math.random() * canvas.width * x_n_screen -
-            (canvas.width * (x_n_screen - 1)) / 2,
-          y: -10,
-          radius: radius,
-          radius4: radius * radius * radius * radius,
-          speed: Math.random() * 2 + 1,
-          wind: Math.random() * 1 - 0.5,
-          wind_z: Math.random() * 0.01 - 0.005,
+      reset(canvasWidth) {
+        this.radius = Math.random() * 3 + 1;
+        this.speed = Math.random() * 2 + 1;
+        this.wind = Math.random() * 1 - 0.5;
+        this.wind_z = Math.random() * 0.01 - 0.005;
+        this.x = Math.random() * canvasWidth * X_N_SCREEN - (canvasWidth * (X_N_SCREEN - 1)) / 2;
+        this.y = -10;
+      }
+
+      updateX(dt, globalWind) {
+        this.x += (this.wind + globalWind) * dt;
+      }
+
+      updateY(dt) {
+        this.y += (this.radius + 1) * dt;
+      }
+
+      updateRadius(dt) {
+        this.radius += this.wind_z * dt;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const { canvas, ctx, updateCanvasSize } = new CanvasService();
+      const wind = new WindService();
+      const snowflakes = Array.from({ length: COUNT }, () => new Snowflake(canvas));
+
+      const startSnowfall = () => {
+        let lastTime = performance.now();
+
+        const animateSnowfall = (timestamp) => {
+          const dt = (timestamp - lastTime) / FRAME_DURATION_IN_MS;
+          lastTime = timestamp;
+
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          wind.updateGlobalWind();
+
+          snowflakes.forEach((snowflake) => {
+            const alpha = snowflake.alpha;
+
+            if (alpha > 0.01) {
+              ctx.fillStyle = `rgba(255,255,255,${Math.min(1, alpha)})`;
+              ctx.beginPath();
+              ctx.arc(snowflake.x, snowflake.y, snowflake.radius, 0, PI2);
+              ctx.fill();
+            }
+
+            snowflake.updateY(dt);
+            snowflake.updateX(dt, wind.globalWind);
+            snowflake.updateRadius(dt);
+
+            if (snowflake.y > canvas.height || snowflake.radius < 0 || alpha <= 0.01) {
+              snowflake.reset(canvas.width);
+            }
+          });
+
+          requestAnimationFrame(animateSnowfall);
         };
-      }
-
-      function createSnowflakeFirst() {
-        const radius = Math.random() * 3 + 1;
-        return {
-          x: Math.random() * canvas.width,
-          y: Math.random() * canvas.height,
-          radius: radius,
-          radius4: radius * radius * radius * radius,
-          speed: Math.random() * 2 + 1,
-          wind: Math.random() * 1 - 0.5,
-          wind_z: Math.random() * 0.02 - 0.01,
-        };
-      }
-
-      function animateSnowfall(timestamp) {
-        const dt = (timestamp - lastTime) / 16.67; // нормируем к ~60fps
-        lastTime = timestamp;
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        wind_global = Math.max(
-          -maxWind,
-          Math.min(maxWind, wind_global + (Math.random() * 0.2 - 0.1))
-        );
-        wind_global *= wind_decay;
-
-        for (let i = 0; i < snowflakes.length; i++) {
-          const s = snowflakes[i];
-
-          s.radius4 = s.radius * s.radius * s.radius * s.radius;
-
-          const alpha = alphaFactor / s.radius4;
-
-          if (alpha > 0.01) {
-            ctx.fillStyle = `rgba(255,255,255,${alpha > 1 ? 1 : alpha})`;
-            ctx.beginPath();
-            ctx.arc(s.x, s.y, s.radius, 0, PI2);
-            ctx.fill();
-          }
-
-          s.y += (s.radius + 1) * dt;
-          s.x += (s.wind + wind_global) * dt;
-          s.radius += s.wind_z * dt;
-
-          if (s.y > canvas.height || s.radius < 0 || alpha <= 0.01)
-            resetSnowflake(s);
-        }
 
         requestAnimationFrame(animateSnowfall);
-      }
-      requestAnimationFrame(animateSnowfall);
 
-      window.addEventListener("resize", () => {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-      });
-    </script>
-  </body>
+        window.addEventListener('resize', updateCanvasSize);
+
+        document.body.append(canvas);
+      };
+
+      startSnowfall();
+    });
+  </script>
+</body>
 </html>

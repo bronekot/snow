@@ -125,7 +125,11 @@
             snowflakes.forEach((snowflake) => {
               const alpha = snowflake.alpha;
 
-              if (alpha > 0.01) {
+              if (
+                alpha > 0.01 &&
+                snowflake.x > -50 &&
+                snowflake.x < canvas.width + 50
+              ) {
                 ctx.fillStyle = `rgba(255,255,255,${Math.min(1, alpha)})`;
                 ctx.beginPath();
                 ctx.arc(snowflake.x, snowflake.y, snowflake.radius, 0, PI2);

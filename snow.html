@@ -65,7 +65,7 @@
         speed = Math.random() * 2 + 1;
         wind = Math.random() * 1 - 0.5;
         wind_z = Math.random() * 0.02 - 0.01;
-        alpha = 1;
+        alpha;
 
         constructor(canvas) {
           this.canvas = canvas;
@@ -142,7 +142,10 @@
                 alpha <= 0.01
               ) {
                 snowflake.reset(canvasWidth);
-              } else if (
+              }
+
+              if (
+                alpha > 0.01 &&
                 snowflake.x > -50 &&
                 snowflake.x < canvasWidth + 50
               ) {

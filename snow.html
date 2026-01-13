@@ -134,22 +134,20 @@
               snowflake.updateX(dt, globalWind);
               snowflake.updateRadius(dt);
 
-              const alpha = snowflake.alpha;
-
               if (
                 snowflake.y > canvasHeight ||
                 snowflake.radius < 0 ||
-                alpha <= 0.01
+                snowflake.alpha <= 0.01
               ) {
                 snowflake.reset(canvasWidth);
               }
 
               if (
-                alpha > 0.01 &&
+                snowflake.alpha > 0.01 &&
                 snowflake.x > -50 &&
                 snowflake.x < canvasWidth + 50
               ) {
-                ctx.fillStyle = `rgba(255,255,255,${Math.min(1, alpha)})`;
+                ctx.fillStyle = `rgba(255,255,255,${Math.min(1, snowflake.alpha)})`;
                 ctx.beginPath();
                 ctx.arc(snowflake.x, snowflake.y, snowflake.radius, 0, PI2);
                 ctx.fill();

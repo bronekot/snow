@@ -141,10 +141,7 @@
                 snowflake.alpha <= MIN_ALPHA_THRESHOLD
               ) {
                 snowflake.reset(canvasWidth);
-              }
-
-              if (
-                snowflake.alpha > MIN_ALPHA_THRESHOLD &&
+              } else if (
                 snowflake.x > -50 &&
                 snowflake.x < canvasWidth + 50
               ) {

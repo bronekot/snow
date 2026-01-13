@@ -65,18 +65,18 @@
         speed = Math.random() * 2 + 1;
         wind = Math.random() * 1 - 0.5;
         wind_z = Math.random() * 0.02 - 0.01;
+        alpha = 1;
 
         constructor(canvas) {
           this.canvas = canvas;
           this.x = Math.random() * this.canvas.width;
           this.y = Math.random() * this.canvas.height;
+          this.updateAlpha();
         }
 
-        get alpha() {
-          return (
-            ALPHA_FACTOR /
-            (this.radius * this.radius * this.radius * this.radius)
-          );
+        updateAlpha() {
+          const r2 = this.radius * this.radius;
+          this.alpha = ALPHA_FACTOR / (r2 * r2);
         }
 
         reset(canvasWidth) {
@@ -88,6 +88,7 @@
             Math.random() * canvasWidth * X_N_SCREEN -
             (canvasWidth * (X_N_SCREEN - 1)) / 2;
           this.y = -10;
+          this.updateAlpha();
         }
 
         updateX(dt, globalWind) {
@@ -100,6 +101,7 @@
 
         updateRadius(dt) {
           this.radius += this.wind_z * dt;
+          this.updateAlpha();
         }
       }
 
@@ -118,34 +120,36 @@
             const dt = (timestamp - lastTime) / FRAME_DURATION_IN_MS;
             lastTime = timestamp;
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
             wind.updateGlobalWind();
 
+            const globalWind = wind.globalWind;
+
             snowflakes.forEach((snowflake) => {
+              snowflake.updateY(dt);
+              snowflake.updateX(dt, globalWind);
+              snowflake.updateRadius(dt);
+
               const alpha = snowflake.alpha;
 
               if (
-                alpha > 0.01 &&
+                snowflake.y > canvasHeight ||
+                snowflake.radius < 0 ||
+                alpha <= 0.01
+              ) {
+                snowflake.reset(canvasWidth);
+              } else if (
                 snowflake.x > -50 &&
-                snowflake.x < canvas.width + 50
+                snowflake.x < canvasWidth + 50
               ) {
                 ctx.fillStyle = `rgba(255,255,255,${Math.min(1, alpha)})`;
                 ctx.beginPath();
                 ctx.arc(snowflake.x, snowflake.y, snowflake.radius, 0, PI2);
                 ctx.fill();
-              }
-
-              snowflake.updateY(dt);
-              snowflake.updateX(dt, wind.globalWind);
-              snowflake.updateRadius(dt);
-
-              if (
-                snowflake.y > canvas.height ||
-                snowflake.radius < 0 ||
-                alpha <= 0.01
-              ) {
-                snowflake.reset(canvas.width);
               }
             });
 

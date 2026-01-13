@@ -26,6 +26,7 @@
       const PI2 = Math.PI * 2;
       const FRAME_DURATION_IN_MS = 16.67;
       const X_N_SCREEN = 2;
+      const MIN_ALPHA_THRESHOLD = 0.01;
       // const wind_decay = maxWind ** (1 / fps);
       const WIND_DECAY = 0.9995;
 
@@ -65,7 +66,7 @@
         speed = Math.random() * 2 + 1;
         wind = Math.random() * 1 - 0.5;
         wind_z = Math.random() * 0.02 - 0.01;
-        alpha;
+        alpha = 0;
 
         constructor(canvas) {
           this.canvas = canvas;
@@ -137,13 +138,13 @@
               if (
                 snowflake.y > canvasHeight ||
                 snowflake.radius < 0 ||
-                snowflake.alpha <= 0.01
+                snowflake.alpha <= MIN_ALPHA_THRESHOLD
               ) {
                 snowflake.reset(canvasWidth);
               }
 
               if (
-                snowflake.alpha > 0.01 &&
+                snowflake.alpha > MIN_ALPHA_THRESHOLD &&
                 snowflake.x > -50 &&
                 snowflake.x < canvasWidth + 50
               ) {
